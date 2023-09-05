@@ -71,21 +71,36 @@ awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=na}; printf "%s%s%s%s%s%s%s%s%s%
 rm svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths.gff svim_variants_length.txt
 
 #add the SV-TE overlap column
-paste -d ' ' <(cat svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength.gff) <(awk '{print $5-$4}' svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength.gff) > svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif.gff
+paste -d ' ' <(cat svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength.gff) <(awk '{print ($5-$4+1)}' svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength.gff) > svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif.gff
 rm svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength.gff
 
 #sorting uniquely by SV name and RepeatMasker annotation overlap
 sort -k1V,1 -k13nr,13 svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif.gff | awk -F" " '!_[$1]++' > svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_su.gff
 rm svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif.gff
+head svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_su.gff
 
-#intersect TE>0.5*SV
-awk '$11>$12*0.5{print $0}' svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_su.gff > svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV.gff
+#intersect hit>0.5*SV
+awk '$13>$12*0.5{print $0}' svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_su.gff > svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV.gff
+printf '\n'
+wc -l svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV.gff
 rm svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_su.gff
 
-#intersect SV>0.8*TE
-awk '$12>$11*0.8{print $0}' svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV.gff > svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV_0.8TE.gff
+#intersect hit>0.8*TE
+awk '$13>$11*0.8{print $0}' svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV.gff > svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV_0.8TE.gff
+
+printf '\n'
+wc -l svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV_0.8TE.gff
+printf '\n'
 rm svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV.gff
 
+# Remove false positive families from the TE lib
+grep -v -E 'Os0414_INT|Os2860|Os0943|Os0674|Os2340|Os1611|Os0027|DTX_incomp_Osati_B_G2045_Map6|DTX_incomp_chim_Osati_B_R4158_Map18|6035756|22531107|16542740|DTX_comp_Osati_B_R475_Map20' svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV_0.8TE.gff > svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV_0.8TE_removedfamilies.gff
+
+echo 'Number of TIPs in '$1
+wc -l svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV_0.8TE_removedfamilies.gff
+printf '\n'
+
+rm svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV_0.8TE.gff
 
 # ----------------------------- the format of the output file is (tab separated except last three columns):-------------------------------------#
 # variant_name tool mechanism identification_start identification_end divergence strand frame TE_name TE_full_length SV_full_length Overlap
@@ -94,8 +109,9 @@ rm svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_wi
 # Annotating the VCF file 
 
 # 1. Obtaining variant ID + TE annotation file
-awk '{print $1,$10}' svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV_0.8TE.gff | sed 's/"//g' | sed 's/Motif://g' > temp_id_info.txt
+awk '{print $1,$10}' svim_variants_insanddels.fasta.out_sorted_9cols_withTElengths_withSVlength_withDif_0.5SV_0.8TE_removedfamilies.gff | sed 's/"//g' | sed 's/Motif://g' > temp_id_info.txt
 awk '{print $1,";TE_ANNOT="$2}' temp_id_info.txt > id_info.txt
+head id_info.txt
 
 # 2. Add the INFO line to the header
 sed '/##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">/a ##INFO=<ID=TE_ANNOT,Number=1,Type=String,Description="Transposable element annotation">' variants.vcf > temp_variants.vcf
